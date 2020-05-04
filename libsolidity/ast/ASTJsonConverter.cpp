@@ -458,7 +458,6 @@ bool ASTJsonConverter::visit(UserDefinedTypeName const& _node)
 	setJsonNode(_node, "UserDefinedTypeName", {
 		make_pair("name", namePathToString(_node.namePath())),
 		make_pair("referencedDeclaration", idOrNull(_node.annotation().referencedDeclaration)),
-		make_pair("contractScope", idOrNull(_node.annotation().contractScope)),
 		make_pair("typeDescriptions", typePointerToJson(_node.annotation().type, true))
 	});
 	return false;

@@ -132,6 +132,7 @@ vector<Declaration const*> GlobalContext::declarations() const
 
 MagicVariableDeclaration const* GlobalContext::currentThis() const
 {
+	solAssert(m_currentContract, "");
 	if (!m_thisPointer[m_currentContract])
 		m_thisPointer[m_currentContract] = make_shared<MagicVariableDeclaration>(magicVariableToID("this"), "this", TypeProvider::contract(*m_currentContract));
 	return m_thisPointer[m_currentContract].get();
@@ -140,6 +141,7 @@ MagicVariableDeclaration const* GlobalContext::currentThis() const
 
 MagicVariableDeclaration const* GlobalContext::currentSuper() const
 {
+	solAssert(m_currentContract, "");
 	if (!m_superPointer[m_currentContract])
 		m_superPointer[m_currentContract] = make_shared<MagicVariableDeclaration>(magicVariableToID("super"), "super", TypeProvider::contract(*m_currentContract, true));
 	return m_superPointer[m_currentContract].get();

@@ -89,6 +89,8 @@ bool TypeChecker::visit(ContractDefinition const& _contract)
 	for (auto const& n: _contract.subNodes())
 		n->accept(*this);
 
+	m_currentContract = nullptr;
+
 	return false;
 }
 
@@ -330,7 +332,9 @@ bool TypeChecker::visit(FunctionDefinition const& _function)
 {
 	if (_function.markedVirtual())
 	{
-		if (_function.annotation().contract->isInterface())
+		if (_function.isFree())
+			m_errorReporter.warning(0000_error, _function.location(), "Free functions cannot be virtual.");
+		else if (_function.annotation().contract->isInterface())
 			m_errorReporter.warning(5815_error, _function.location(), "Interface functions are implicitly \"virtual\"");
 		if (_function.visibility() == Visibility::Private)
 			m_errorReporter.typeError(3942_error, _function.location(), "\"virtual\" and \"private\" cannot be used together.");
@@ -338,6 +342,8 @@ bool TypeChecker::visit(FunctionDefinition const& _function)
 
 	if (_function.isPayable())
 	{
+		if (_function.isFree())
+			m_errorReporter.warning(0000_error, _function.location(), "Free functions cannot be payable.");
 		if (_function.libraryFunction())
 			m_errorReporter.typeError(7708_error, _function.location(), "Library functions cannot be payable.");
 		if (_function.isOrdinary() && !_function.isPartOfExternalInterface())
@@ -396,9 +402,13 @@ bool TypeChecker::visit(FunctionDefinition const& _function)
 	set<Declaration const*> modifiers;
 	for (ASTPointer<ModifierInvocation> const& modifier: _function.modifiers())
 	{
-		auto baseContracts = dynamic_cast<ContractDefinition const&>(*_function.scope()).annotation().linearizedBaseContracts;
-		// Delete first base which is just the main contract itself
-		baseContracts.erase(baseContracts.begin());
+		vector<ContractDefinition const*> baseContracts;
+		if (auto contract = dynamic_cast<ContractDefinition const*>(_function.scope()))
+		{
+			baseContracts = contract->annotation().linearizedBaseContracts;
+			// Delete first base which is just the main contract itself
+			baseContracts.erase(baseContracts.begin());
+		}
 
 		visitManually(
 			*modifier,
@@ -413,7 +423,20 @@ bool TypeChecker::visit(FunctionDefinition const& _function)
 		else
 			modifiers.insert(decl);
 	}
-	if (m_currentContract->isInterface())
+
+	if (!m_currentContract)
+	{
+		solAssert(_function.isFree(), "");
+		solAssert(!_function.isConstructor(), "");
+		solAssert(!_function.isFallback(), "");
+		solAssert(!_function.isReceive(), "");
+
+		if (!_function.isImplemented())
+			m_errorReporter.typeError(0000_error, _function.location(), "Free functions must be implemented.");
+		if (_function.visibility() != Visibility::Default)
+			m_errorReporter.typeError(0000_error, _function.location(), "Free functions cannot have visibility.");
+	}
+	else if (m_currentContract->isInterface())
 	{
 		if (_function.isImplemented())
 			m_errorReporter.typeError(4726_error, _function.location(), "Functions in interfaces cannot have an implementation.");
@@ -427,6 +450,7 @@ bool TypeChecker::visit(FunctionDefinition const& _function)
 	else if (m_currentContract->contractKind() == ContractKind::Library)
 		if (_function.isConstructor())
 			m_errorReporter.typeError(7634_error, _function.location(), "Constructor cannot be defined in libraries.");
+
 	if (_function.isImplemented())
 		_function.body().accept(*this);
 	else if (_function.isConstructor())

@@ -2968,9 +2968,10 @@ string FunctionType::toString(bool _short) const
 	{
 		auto const* functionDefinition = dynamic_cast<FunctionDefinition const*>(m_declaration);
 		solAssert(functionDefinition, "");
-		auto const* contract = dynamic_cast<ContractDefinition const*>(functionDefinition->scope());
-		solAssert(contract, "");
-		name += contract->annotation().canonicalName;
+		if (auto const* contract = dynamic_cast<ContractDefinition const*>(functionDefinition->scope()))
+			name += contract->annotation().canonicalName;
+		else
+			name += "<SOURCENAME>";// TODO
 		name += '.';
 		name += functionDefinition->name();
 	}

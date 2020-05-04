@@ -804,6 +804,7 @@ public:
 	bool isConstructor() const { return m_kind == Token::Constructor; }
 	bool isFallback() const { return m_kind == Token::Fallback; }
 	bool isReceive() const { return m_kind == Token::Receive; }
+	bool isFree() const;
 	Token kind() const { return m_kind; }
 	bool isPayable() const { return m_stateMutability == StateMutability::Payable; }
 	std::vector<ASTPointer<ModifierInvocation>> const& modifiers() const { return m_functionModifiers; }
@@ -846,6 +847,9 @@ public:
 		ContractDefinition const& _mostDerivedContract,
 		ContractDefinition const* _searchStart = nullptr
 	) const override;
+
+protected:
+	Visibility defaultVisibility() const override { return isFree() ? Visibility::Internal : Visibility::Public; }
 
 private:
 	StateMutability m_stateMutability;
