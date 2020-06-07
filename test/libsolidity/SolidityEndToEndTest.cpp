@@ -3465,12 +3465,12 @@ BOOST_AUTO_TEST_CASE(array_copy_calldata_storage)
 	ABI_CHECK(callContractFunction("retrieve()"), encodeArgs(9, 28, 9, 28, 4, 3, 32));
 }
 
-BOOST_AUTO_TEST_CASE(array_copy_including_mapping)
+BOOST_AUTO_TEST_CASE(array_copy_including_array)
 {
 	char const* sourceCode = R"(
 		contract c {
-			mapping(uint=>uint)[90][] large;
-			mapping(uint=>uint)[3][] small;
+			uint[][90][] large;
+			uint[][3][] small;
 			function test() public returns (uint r) {
 				for (uint i = 0; i < 7; i++) {
 					large.push();

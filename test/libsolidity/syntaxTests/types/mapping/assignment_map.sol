@@ -23,5 +23,5 @@ contract G {
 // ----
 // TypeError: (17-67): Mappings cannot be assigned to.
 // TypeError: (120-148): Mappings cannot be assigned to.
-// TypeError: (263-264): Mappings cannot be assigned to.
+// TypeError: (263-264): Types in storage containing (nested) mappings cannot be assigned to.
 // TypeError: (312-340): Mappings cannot be assigned to.

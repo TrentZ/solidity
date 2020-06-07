@@ -21,4 +21,4 @@ contract Test {
 }
 
 // ----
-// f() -> 0
+// TypeError: (172-182): Type struct Test.S is only valid in storage because it contains a (nested) mapping.
