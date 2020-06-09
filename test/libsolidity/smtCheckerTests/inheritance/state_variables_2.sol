@@ -17,3 +17,4 @@ contract C is Base2 {
 	}
 }
 // ----
+// Warning: (205-220): Error trying to invoke SMT solver.
