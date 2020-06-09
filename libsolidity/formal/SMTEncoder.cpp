@@ -1241,34 +1241,17 @@ pair<smtutil::Expression, smtutil::Expression> SMTEncoder::arithmeticOperation(
 	auto symbMax = smt::maxValue(*intType);
 
 	smtutil::Expression intValueRange = (0 - symbMin) + symbMax + 1;
-	// y % m => x * m + k = y, k < m
 	string suffix = to_string(_operation.id()) + "_" + to_string(m_context.newSlackId());
 	smt::SymbolicIntVariable k(intType, intType, "k_" + suffix, m_context);
 	smt::SymbolicIntVariable m(intType, intType, "m_" + suffix, m_context);
 	smt::SymbolicIntVariable x(intType, intType, "x_" + suffix, m_context);
+
+	// valueNoMod % intRange => k, such that `k + m * intValueRange = valueNoMod` and `k` is in intTypes's range.
 	m_context.addAssertion(valueNoMod == (k.currentValue() + intValueRange * m.currentValue()));
-	m_context.addAssertion(k.currentValue() < intValueRange);
-	m_context.addAssertion(k.currentValue() >= 0);
+	m_context.addAssertion(k.currentValue() >= symbMin);
+	m_context.addAssertion(k.currentValue() <= symbMax);
 
-	smtutil::Expression valueMod = k.currentValue();//valueNoMod % intValueRange;
-	auto value = smtutil::Expression::ite(
-		valueNoMod > symbMax,
-		valueMod,
-		smtutil::Expression::ite(
-			valueNoMod < symbMin,
-			valueMod,
-			valueNoMod
-		)
-	);
-
-	if (intType->isSigned())
-		value = smtutil::Expression::ite(
-			value > symbMax,
-			value - intValueRange,
-			value
-		);
-
-	return {value, valueNoMod};
+	return {k.currentValue(), valueNoMod};
 }
 
 void SMTEncoder::compareOperation(BinaryOperation const& _op)
