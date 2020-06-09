@@ -1242,8 +1242,7 @@ pair<smtutil::Expression, smtutil::Expression> SMTEncoder::arithmeticOperation(
 
 	smtutil::Expression intValueRange = (0 - symbMin) + symbMax + 1;
 	// y % m => x * m + k = y, k < m
-	static unsigned counter = 0;
-	string suffix = to_string(_operation.id()) + "_" + to_string(counter++);
+	string suffix = to_string(_operation.id()) + "_" + to_string(m_context.newSlackId());
 	smt::SymbolicIntVariable k(intType, intType, "k_" + suffix, m_context);
 	smt::SymbolicIntVariable m(intType, intType, "m_" + suffix, m_context);
 	smt::SymbolicIntVariable x(intType, intType, "x_" + suffix, m_context);
