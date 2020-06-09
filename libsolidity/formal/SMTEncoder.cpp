@@ -1203,7 +1203,7 @@ pair<smtutil::Expression, smtutil::Expression> SMTEncoder::arithmeticOperation(
 	smtutil::Expression const& _left,
 	smtutil::Expression const& _right,
 	TypePointer const& _commonType,
-	Expression const&
+	Expression const& _operation
 )
 {
 	static set<Token> validOperators{
@@ -1241,12 +1241,23 @@ pair<smtutil::Expression, smtutil::Expression> SMTEncoder::arithmeticOperation(
 	auto symbMax = smt::maxValue(*intType);
 
 	smtutil::Expression intValueRange = (0 - symbMin) + symbMax + 1;
+	// y % m => x * m + k = y, k < m
+	static unsigned counter = 0;
+	string suffix = to_string(_operation.id()) + "_" + to_string(counter++);
+	smt::SymbolicIntVariable k(intType, intType, "k_" + suffix, m_context);
+	smt::SymbolicIntVariable m(intType, intType, "m_" + suffix, m_context);
+	smt::SymbolicIntVariable x(intType, intType, "x_" + suffix, m_context);
+	m_context.addAssertion(valueNoMod == (k.currentValue() + intValueRange * m.currentValue()));
+	m_context.addAssertion(k.currentValue() < intValueRange);
+	m_context.addAssertion(k.currentValue() >= 0);
+
+	smtutil::Expression valueMod = k.currentValue();//valueNoMod % intValueRange;
 	auto value = smtutil::Expression::ite(
 		valueNoMod > symbMax,
-		valueNoMod % intValueRange,
+		valueMod,
 		smtutil::Expression::ite(
 			valueNoMod < symbMin,
-			valueNoMod % intValueRange,
+			valueMod,
 			valueNoMod
 		)
 	);
