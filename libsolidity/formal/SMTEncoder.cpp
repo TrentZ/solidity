@@ -1226,16 +1226,36 @@ pair<smtutil::Expression, smtutil::Expression> SMTEncoder::arithmeticOperation(
 	else
 		intType = TypeProvider::uint256();
 
-	smtutil::Expression valueNoMod(
-		_op == Token::Add ? _left + _right :
-		_op == Token::Sub ? _left - _right :
-		_op == Token::Div ? division(_left, _right, *intType) :
-		_op == Token::Mul ? _left * _right :
-		/*_op == Token::Mod*/ _left % _right
-	);
+	optional<smtutil::Expression> valueNoMod;
+	if (_op == Token::Add)
+		valueNoMod = _left + _right;
+	else if (_op == Token::Sub)
+		valueNoMod = _left - _right;
+	else if (_op == Token::Mul)
+		valueNoMod = _left * _right;
+	else if (_op == Token::Div)
+		valueNoMod = division(_left, _right, *intType);
+	else /* _op == Token::Mod */
+		valueNoMod = _left % _right;
 
 	if (_op == Token::Div || _op == Token::Mod)
+	{
 		m_context.addAssertion(_right != 0);
+
+		// mod and unsigned division never underflow/overflow
+		if (_op == Token::Mod || !intType->isSigned())
+			return {*valueNoMod, *valueNoMod};
+
+		// The only case where division overflows is
+		// - type is signed
+		// - LHS is type.min
+		// - RHS is -1
+		// the result is then -(type.min), which wraps back to type.min
+		smtutil::Expression maxLeft = _left == smt::minValue(*intType);
+		smtutil::Expression minusOneRight = _right == -1;
+		smtutil::Expression wrap = smtutil::Expression::ite(maxLeft && minusOneRight, smt::minValue(*intType), *valueNoMod);
+		return {wrap, *valueNoMod};
+	}
 
 	auto symbMin = smt::minValue(*intType);
 	auto symbMax = smt::maxValue(*intType);
@@ -1244,14 +1264,13 @@ pair<smtutil::Expression, smtutil::Expression> SMTEncoder::arithmeticOperation(
 	string suffix = to_string(_operation.id()) + "_" + to_string(m_context.newSlackId());
 	smt::SymbolicIntVariable k(intType, intType, "k_" + suffix, m_context);
 	smt::SymbolicIntVariable m(intType, intType, "m_" + suffix, m_context);
-	smt::SymbolicIntVariable x(intType, intType, "x_" + suffix, m_context);
 
 	// valueNoMod % intRange => k, such that `k + m * intValueRange = valueNoMod` and `k` is in intTypes's range.
-	m_context.addAssertion(valueNoMod == (k.currentValue() + intValueRange * m.currentValue()));
+	m_context.addAssertion(*valueNoMod == (k.currentValue() + intValueRange * m.currentValue()));
 	m_context.addAssertion(k.currentValue() >= symbMin);
 	m_context.addAssertion(k.currentValue() <= symbMax);
 
-	return {k.currentValue(), valueNoMod};
+	return {k.currentValue(), *valueNoMod};
 }
 
 void SMTEncoder::compareOperation(BinaryOperation const& _op)
